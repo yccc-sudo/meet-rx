@@ -327,10 +327,10 @@
   function igLink(){
     if(state.mode === 'in'){
       const h = cleanHandle(IG);
-      return h ? 'https://ig.me/m/' + h : 'https://www.instagram.com/direct/inbox/';
+      return h ? 'https://www.instagram.com/' + h : 'https://www.instagram.com/direct/inbox/';
     }
     const h = cleanHandle(state.targetIg);
-    return h ? 'https://ig.me/m/' + h : 'https://www.instagram.com/direct/inbox/';
+    return h ? 'https://www.instagram.com/' + h : 'https://www.instagram.com/direct/inbox/';
   }
 
   function render(){
