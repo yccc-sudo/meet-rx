@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>見面拖延症治療所</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --desk:#DCE3DA;
+    --slip:#FBFAF5;
+    --ink:#1C2B24;
+    --muted:#6E7D74;
+    --rule:#C3CEC5;
+    --rx:#B0303A;
+    --rx-soft:#F3DEDF;
+    --han:"PingFang HK","PingFang TC","Noto Sans HK","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--desk);color:var(--ink);
+    font-family:var(--han);font-size:16px;line-height:1.6;
+    padding:20px 16px 48px;display:flex;justify-content:center;
+  }
+  .wrap{width:100%;max-width:430px}
+
+  .clinic{text-align:center;padding:4px 0 18px}
+  .clinic h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-0.02em;line-height:1.25}
+  .clinic h1 .sub{display:block;font-size:15px;font-weight:500;color:var(--muted);letter-spacing:0.06em;margin-top:6px}
+
+  .timer{
+    margin:16px auto 0;display:inline-flex;align-items:baseline;gap:8px;
+    font-family:var(--mono);font-size:13px;color:var(--muted);
+    background:rgba(255,255,255,.5);border:1px solid var(--rule);
+    border-radius:999px;padding:5px 14px;
+  }
+  .timer b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .timer.hot{border-color:var(--rx);background:var(--rx-soft);color:var(--rx)}
+  .timer.hot b{color:var(--rx)}
+
+  .gate{margin-top:14px}
+  .gate p.lead{text-align:center;color:var(--muted);font-size:14px;margin:0 0 16px}
+  .bigbtn{
+    display:block;width:100%;text-align:left;cursor:pointer;
+    background:var(--slip);border:0;border-radius:3px;
+    padding:20px 22px;margin-bottom:12px;
+    font-family:var(--han);color:var(--ink);
+    box-shadow:0 1px 0 rgba(28,43,36,.12), 0 14px 28px -18px rgba(28,43,36,.5);
+  }
+  .bigbtn strong{display:block;font-size:19px;font-weight:700;margin-bottom:3px}
+  .bigbtn span{display:block;font-size:13.5px;color:var(--muted);line-height:1.55}
+  .bigbtn:active{transform:translateY(1px)}
+
+  .slip{
+    position:relative;background:var(--slip);border-radius:3px;
+    padding:26px 22px 22px;margin-top:20px;
+    box-shadow:0 1px 0 rgba(28,43,36,.12), 0 14px 28px -18px rgba(28,43,36,.5);
+  }
+  .slip::before{
+    content:"";position:absolute;left:0;right:0;top:-9px;height:9px;
+    background:radial-gradient(circle at 5px 9px, transparent 4.5px, var(--slip) 5px) 0 0/10px 9px repeat-x;
+  }
+  .slipno{
+    font-family:var(--mono);font-size:11.5px;color:var(--muted);
+    display:flex;justify-content:space-between;
+    border-bottom:1px solid var(--rule);padding-bottom:10px;
+  }
+  .stamp{
+    position:absolute;right:14px;top:52px;transform:rotate(-11deg);
+    border:2px solid var(--rx);color:var(--rx);border-radius:4px;
+    padding:3px 8px 4px;font-size:13px;font-weight:700;letter-spacing:.08em;
+    opacity:.72;pointer-events:none;
+  }
+
+  .field{padding:16px 0;border-bottom:1px dashed var(--rule)}
+  .field:last-of-type{border-bottom:0}
+  .q{font-size:14px;font-weight:600;margin-bottom:9px;color:var(--ink)}
+  .q span{font-weight:400;color:var(--muted);font-size:12.5px;margin-left:6px}
+
+  input[type=text],input[type=date],input[type=time]{
+    width:100%;font-family:var(--han);font-size:16px;color:var(--ink);
+    background:transparent;border:0;border-bottom:1.5px solid var(--rule);
+    padding:6px 2px;border-radius:0;
+  }
+  input::placeholder{color:#A9B5AC}
+  input:focus{outline:0;border-bottom-color:var(--ink)}
+  input[type=date],input[type=time]{font-family:var(--mono);margin-top:10px}
+  input.handle{font-family:var(--mono)}
+  .subinput{margin-top:10px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{
+    font-family:var(--han);font-size:14px;padding:7px 13px;border-radius:999px;
+    border:1.5px solid var(--rule);background:transparent;color:var(--muted);
+    cursor:pointer;transition:background .12s,color .12s,border-color .12s;
+  }
+  .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--slip)}
+  .chip:focus-visible,button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--rx);outline-offset:2px}
+  .hidden{display:none}
+
+  .preview{
+    margin-top:18px;background:#F1F3EC;border-left:3px solid var(--ink);
+    padding:12px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.75;
+    white-space:pre-wrap;word-break:break-word;color:var(--ink);
+  }
+
+  .send{
+    display:block;width:100%;margin-top:18px;background:var(--rx);color:#fff;
+    text-align:center;text-decoration:none;font-family:var(--han);
+    font-size:17px;font-weight:600;padding:15px;border:0;border-radius:3px;cursor:pointer;
+  }
+  .send:active{transform:translateY(1px)}
+  .copy{
+    display:block;width:100%;margin-top:9px;background:transparent;
+    border:1.5px solid var(--rule);color:var(--muted);font-family:var(--han);
+    font-size:14px;padding:11px;border-radius:3px;cursor:pointer;
+  }
+  .note{margin-top:14px;font-size:12.5px;color:var(--muted);text-align:center;line-height:1.65}
+  .back{
+    display:block;width:100%;margin-top:8px;background:transparent;border:0;
+    color:var(--muted);font-family:var(--han);font-size:13px;padding:8px;cursor:pointer;
+  }
+
+  .done{
+    margin-top:20px;background:var(--slip);border-radius:3px;padding:24px 22px;
+    box-shadow:0 14px 28px -18px rgba(28,43,36,.5);
+  }
+  .done h2{margin:0 0 8px;font-size:21px;text-align:center}
+  .done p{margin:0 0 14px;font-size:14px;color:var(--muted);line-height:1.7;text-align:center}
+  .done .preview{margin-bottom:14px}
+  .again{display:block;margin:0 auto;background:transparent;border:1.5px solid var(--rule);
+    color:var(--muted);font-family:var(--han);font-size:14px;padding:10px 20px;
+    border-radius:3px;cursor:pointer}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="clinic">
+    <h1>見面拖延症治療所<span class="sub">一分鐘落實，唔好再講得閒飲茶</span></h1>
+    <div class="timer hidden" id="timer"><span>你已經考慮咗</span> <b id="clock">00:00</b></div>
+  </header>
+
+  <section class="gate" id="gate">
+    <p class="lead">揀一個開始</p>
+    <button class="bigbtn" data-mode="in">
+      <strong>約啦約啦</strong>
+      <span id="inSub">填好之後直接送去我個 IG DM</span>
+    </button>
+    <button class="bigbtn" data-mode="out">
+      <strong>我想搵其他人</strong>
+      <span>填好之後喺 IG 揀個人送出</span>
+    </button>
+  </section>
+
+  <main id="form" class="hidden">
+    <section class="slip">
+      <div class="stamp">唔好再等</div>
+      <div class="slipno"><span id="slipno">No. —</span><span>見面處方箋</span></div>
+
+      <div class="field hidden" id="fTarget">
+        <div class="q">想搵邊個<span>可以留空</span></div>
+        <input type="text" id="target" placeholder="例如：阿明">
+        <input type="text" id="targetIg" class="subinput handle" placeholder="佢個 IG（可留空，留空就自己揀）" autocapitalize="off" autocorrect="off" spellcheck="false">
+      </div>
+
+      <div class="field" id="fName">
+        <div class="q">你叫咩名<span>對方要知道係邊個搵佢</span></div>
+        <input type="text" id="name" placeholder="例如：阿明" autocomplete="name">
+      </div>
+
+      <div class="field">
+        <div class="q">幾時</div>
+        <div class="chips" id="dateChips">
+          <button class="chip" data-v="today">今日</button>
+          <button class="chip" data-v="tomorrow" aria-pressed="true">聽日</button>
+          <button class="chip" data-v="weekend">今個週末</button>
+          <button class="chip" data-v="custom">其他日子</button>
+        </div>
+        <input type="date" id="customDate" class="hidden" aria-label="自己揀日期">
+      </div>
+
+      <div class="field">
+        <div class="q">邊個時段</div>
+        <div class="chips" id="slotChips">
+          <button class="chip" data-v="上午">上午</button>
+          <button class="chip" data-v="下午" aria-pressed="true">下午</button>
+          <button class="chip" data-v="夜晚">夜晚</button>
+          <button class="chip" data-v="time">夾實個鐘</button>
+        </div>
+        <input type="time" id="customTime" class="hidden" aria-label="自己揀時間">
+      </div>
+
+      <div class="field">
+        <div class="q">想做啲咩</div>
+        <div class="chips" id="actChips">
+          <button class="chip" data-v="食飯" aria-pressed="true">食飯</button>
+          <button class="chip" data-v="行街">行街</button>
+          <button class="chip" data-v="打波">打波</button>
+          <button class="chip" data-v="齋傾">齋傾</button>
+          <button class="chip" data-v="其他">其他</button>
+        </div>
+        <input type="text" id="customAct" class="subinput hidden" placeholder="想做啲咩？自己填" aria-label="自己填想做啲咩">
+      </div>
+
+      <div class="field">
+        <div class="q">仲有咩想講<span>唔想寫可以留空</span></div>
+        <input type="text" id="note" placeholder="例如：想試下新開嗰間">
+      </div>
+
+      <div class="preview" id="preview"></div>
+    </section>
+
+    <a class="send" id="send" href="#" target="_blank" rel="noopener">複製內容，開 IG 送出</a>
+    <button class="copy" id="copy">淨係複製</button>
+    <p class="note" id="note-line">IG 唔容許預先填好訊息，所以撳咗之後喺對話框長按貼上就得。</p>
+    <button class="back" id="back">返去頭先</button>
+  </main>
+
+  <section class="done hidden" id="done">
+    <h2>你已經踏出咗第一步</h2>
+    <p id="doneMsg">內容已經複製咗。喺 IG 對話框長按，撳「貼上」，再撳送出。</p>
+    <div class="preview" id="donePreview"></div>
+    <button class="again" id="again">再開多一張</button>
+  </section>
+
+</div>
+
+<script>
+(function(){
+
+  /* ==========================================================
+     設定區 —— 用之前一定要改 IG 呢行
+     ========================================================== */
+  const IG      = 'yc.1am_';  // 你嘅 IG 用戶名，唔使加 @
+  const OWNER   = '';                // 想喺掣度顯示個名就填，留空就顯示「我個 IG DM」
+  const LOG_URL = '';                // Google Apps Script 網址，留空就唔記錄
+  /* ========================================================== */
+
+  const WD = ['日','一','二','三','四','五','六'];
+  const $ = id => document.getElementById(id);
+  const p2 = n => String(n).padStart(2,'0');
+
+  const state = {
+    mode:'in', name:'', target:'', targetIg:'',
+    dateMode:'tomorrow', customDate:'',
+    slot:'下午', customTime:'',
+    act:'食飯', customAct:'', note:''
+  };
+
+  const now = new Date();
+  const slipNo = 'No. ' + String(now.getFullYear()).slice(2) + p2(now.getMonth()+1) + p2(now.getDate())
+                 + '-' + p2(now.getHours()) + p2(now.getMinutes());
+  $('slipno').textContent = slipNo;
+
+  $('inSub').textContent = '填好之後直接送去' + (OWNER ? ' ' + OWNER + ' ' : '我') + '個 IG DM';
+
+  /* ---------- 猶豫計時器 ---------- */
+  let secs = 0, running = false;
+  setInterval(function(){
+    if(!running) return;
+    secs++;
+    $('clock').textContent = p2(Math.floor(secs/60)) + ':' + p2(secs%60);
+    if(secs === 60) $('timer').classList.add('hot');
+  }, 1000);
+
+  /* ---------- 內容 ---------- */
+  function fmtDate(d){ return (d.getMonth()+1) + '月' + d.getDate() + '日（' + WD[d.getDay()] + '）'; }
+
+  function resolveDate(){
+    const d = new Date();
+    if(state.dateMode === 'today') return fmtDate(d);
+    if(state.dateMode === 'tomorrow'){ d.setDate(d.getDate()+1); return fmtDate(d); }
+    if(state.dateMode === 'weekend'){
+      const dow = d.getDay();
+      if(dow !== 6 && dow !== 0) d.setDate(d.getDate() + ((6 - dow + 7) % 7));
+      return fmtDate(d);
+    }
+    if(state.dateMode === 'custom' && state.customDate){
+      const p = state.customDate.split('-');
+      return fmtDate(new Date(+p[0], +p[1]-1, +p[2]));
+    }
+    return '（未揀日期）';
+  }
+
+  function resolveTime(){
+    if(state.slot === 'time') return state.customTime || '（未夾實時間）';
+    return state.slot + (state.customTime ? ' ' + state.customTime : '');
+  }
+
+  function resolveAct(){
+    if(state.act === '其他') return state.customAct.trim() || '（未填）';
+    return state.act;
+  }
+
+  function buildMsg(){
+    const L = ['見面處方箋 ' + slipNo];
+    if(state.mode === 'in'){
+      L.push('邊個：' + (state.name.trim() || '（未填名）'));
+    }else if(state.target.trim()){
+      L.push('致：' + state.target.trim());
+    }
+    L.push('幾時：' + resolveDate() + ' ' + resolveTime());
+    L.push('做咩：' + resolveAct());
+    if(state.note.trim()) L.push('備註：' + state.note.trim());
+    L.push('');
+    L.push('拒絕做得閒飲茶人！');
+    L.push('（由「專治拖延症」發出，今次考慮咗 ' + secs + ' 秒）');
+    return L.join('\n');
+  }
+
+  function cleanHandle(v){
+    return String(v).trim()
+      .replace(/^https?:\/\/(www\.)?instagram\.com\//i,'')
+      .replace(/^@/,'')
+      .replace(/\/.*$/,'')
+      .replace(/[^A-Za-z0-9._]/g,'');
+  }
+
+  function igLink(){
+    if(state.mode === 'in'){
+      const h = cleanHandle(IG);
+      return h ? 'https://ig.me/m/' + h : 'https://www.instagram.com/direct/inbox/';
+    }
+    const h = cleanHandle(state.targetIg);
+    return h ? 'https://ig.me/m/' + h : 'https://www.instagram.com/direct/inbox/';
+  }
+
+  function render(){
+    const msg = buildMsg();
+    $('preview').textContent = msg;
+    $('send').href = igLink();
+    if(state.mode === 'out'){
+      $('send').textContent = cleanHandle(state.targetIg)
+        ? '複製內容，開 IG 送出'
+        : '複製內容，去 IG 揀人送出';
+    }else{
+      $('send').textContent = '複製內容，開 IG 送出';
+    }
+  }
+
+  /* ---------- 複製 ---------- */
+  function copyText(text){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      return navigator.clipboard.writeText(text).catch(fallback);
+    }
+    return Promise.resolve(fallback());
+    function fallback(){
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); }catch(err){}
+      document.body.removeChild(ta);
+    }
+  }
+
+  /* ---------- 記錄 ---------- */
+  function logIt(){
+    if(!LOG_URL) return;
+    try{
+      fetch(LOG_URL, {
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          slipNo: slipNo,
+          mode:   state.mode === 'in' ? '收到邀請' : '我發出',
+          name:   state.mode === 'in' ? state.name.trim() : state.target.trim(),
+          date:   resolveDate(),
+          time:   resolveTime(),
+          act:    resolveAct(),
+          note:   state.note.trim(),
+          secs:   secs
+        })
+      });
+    }catch(err){}
+  }
+
+  /* ---------- 事件 ---------- */
+  function wireChips(groupId, key, onPick){
+    const group = $(groupId);
+    group.addEventListener('click', function(e){
+      const btn = e.target.closest('.chip');
+      if(!btn) return;
+      group.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed','false'));
+      btn.setAttribute('aria-pressed','true');
+      state[key] = btn.dataset.v;
+      if(onPick) onPick(btn.dataset.v);
+      render();
+    });
+    group.querySelectorAll('.chip').forEach(c => {
+      if(!c.hasAttribute('aria-pressed')) c.setAttribute('aria-pressed','false');
+    });
+  }
+
+  wireChips('dateChips','dateMode', v => {
+    $('customDate').classList.toggle('hidden', v !== 'custom');
+    if(v === 'custom') $('customDate').focus();
+  });
+  wireChips('slotChips','slot', v => {
+    $('customTime').classList.toggle('hidden', v !== 'time');
+    if(v === 'time') $('customTime').focus();
+  });
+  wireChips('actChips','act', v => {
+    $('customAct').classList.toggle('hidden', v !== '其他');
+    if(v === '其他') $('customAct').focus();
+  });
+
+  const bind = (id, key) => $(id).addEventListener('input', e => { state[key] = e.target.value; render(); });
+  bind('name','name'); bind('note','note');
+  bind('target','target'); bind('targetIg','targetIg'); bind('customAct','customAct');
+  $('customDate').addEventListener('change', e => { state.customDate = e.target.value; render(); });
+  $('customTime').addEventListener('change', e => { state.customTime = e.target.value; render(); });
+
+  /* ---------- 開始畫面 ---------- */
+  $('gate').addEventListener('click', function(e){
+    const btn = e.target.closest('.bigbtn');
+    if(!btn) return;
+    state.mode = btn.dataset.mode;
+    const out = state.mode === 'out';
+    $('fTarget').classList.toggle('hidden', !out);
+    $('fName').classList.toggle('hidden', out);
+    $('gate').classList.add('hidden');
+    $('form').classList.remove('hidden');
+    $('timer').classList.remove('hidden');
+    running = true;
+    render();
+  });
+
+  $('back').addEventListener('click', function(){
+    running = false; secs = 0;
+    $('clock').textContent = '00:00';
+    $('timer').classList.add('hidden');
+    $('timer').classList.remove('hot');
+    $('form').classList.add('hidden');
+    $('gate').classList.remove('hidden');
+  });
+
+  /* ---------- 送出 ---------- */
+  $('send').addEventListener('click', function(e){
+    if(state.mode === 'in' && !state.name.trim()){
+      e.preventDefault();
+      $('name').focus();
+      $('name').placeholder = '請先填你個名';
+      $('name').style.borderBottomColor = '#B0303A';
+      return;
+    }
+    if(state.act === '其他' && !state.customAct.trim()){
+      e.preventDefault();
+      $('customAct').focus();
+      $('customAct').placeholder = '請先填想做啲咩';
+      $('customAct').style.borderBottomColor = '#B0303A';
+      return;
+    }
+    const msg = buildMsg();
+    copyText(msg);
+    running = false;
+    logIt();
+    setTimeout(function(){
+      $('donePreview').textContent = msg;
+      $('doneMsg').textContent = '內容已經複製咗，今次你用咗 ' + secs + ' 秒落決定。喺 IG 對話框長按，撳「貼上」，再送出。貼唔到嘅話，下面段字可以自己揀返。';
+      $('form').classList.add('hidden');
+      $('timer').classList.add('hidden');
+      $('done').classList.remove('hidden');
+      window.scrollTo(0,0);
+    }, 700);
+  });
+
+  $('copy').addEventListener('click', function(){
+    copyText(buildMsg());
+    $('copy').textContent = '已經複製';
+    setTimeout(()=>{ $('copy').textContent = '淨係複製'; }, 1800);
+  });
+
+  $('again').addEventListener('click', function(){
+    $('done').classList.add('hidden');
+    $('gate').classList.remove('hidden');
+    $('timer').classList.remove('hot');
+    secs = 0; $('clock').textContent = '00:00';
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
