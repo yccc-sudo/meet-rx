@@ -152,11 +152,11 @@
     <p class="lead">揀一個開始</p>
     <button class="bigbtn" data-mode="in">
       <strong>約啦約啦</strong>
-      <span id="inSub">填好之後直接送去我個 IG DM</span>
+      <span id="inSub">填好之後開我個 IG，撳「訊息」貼上就得</span>
     </button>
     <button class="bigbtn" data-mode="out">
       <strong>我想搵其他人</strong>
-      <span>填好之後喺 IG 揀個人送出</span>
+      <span>填好之後開對方 IG，撳「訊息」貼上就得</span>
     </button>
   </section>
 
@@ -218,15 +218,15 @@
       <div class="preview" id="preview"></div>
     </section>
 
-    <a class="send" id="send" href="#" target="_blank" rel="noopener">複製內容，開 IG 送出</a>
+    <a class="send" id="send" href="#" target="_blank" rel="noopener">複製內容，開 IG</a>
     <button class="copy" id="copy">淨係複製</button>
-    <p class="note" id="note-line">IG 唔容許預先填好訊息，所以撳咗之後喺對話框長按貼上就得。</p>
+    <p class="note" id="note-line">開咗 IG profile 之後撳「訊息」，喺對話框長按貼上就得。</p>
     <button class="back" id="back">返去頭先</button>
   </main>
 
   <section class="done hidden" id="done">
     <h2>你已經踏出咗第一步</h2>
-    <p id="doneMsg">內容已經複製咗。喺 IG 對話框長按，撳「貼上」，再撳送出。</p>
+    <p id="doneMsg">內容已經複製咗。入到 IG profile 撳「訊息」，長按貼上就得。</p>
     <div class="preview" id="donePreview"></div>
     <button class="again" id="again">再開多一張</button>
   </section>
@@ -239,7 +239,7 @@
   /* ==========================================================
      設定區 —— 用之前一定要改 IG 呢行
      ========================================================== */
-  const IG      = 'yc.1am._';  // 你嘅 IG 用戶名，唔使加 @
+  const IG      = 'yc.1am._';        // 你嘅 IG 用戶名，唔使加 @
   const OWNER   = '';                // 想喺掣度顯示個名就填，留空就顯示「我個 IG DM」
   const LOG_URL = '';                // Google Apps Script 網址，留空就唔記錄
   /* ========================================================== */
@@ -260,7 +260,7 @@
                  + '-' + p2(now.getHours()) + p2(now.getMinutes());
   $('slipno').textContent = slipNo;
 
-  $('inSub').textContent = '填好之後直接送去' + (OWNER ? ' ' + OWNER + ' ' : '我') + '個 IG DM';
+  $('inSub').textContent = '填好之後開' + (OWNER ? ' ' + OWNER + ' ' : '我') + '個 IG，撳「訊息」貼上就得';
 
   /* ---------- 猶豫計時器 ---------- */
   let secs = 0, running = false;
@@ -319,18 +319,15 @@
   function cleanHandle(v){
     return String(v).trim()
       .replace(/^https?:\/\/(www\.)?instagram\.com\//i,'')
+      .replace(/[?#].*$/,'')
       .replace(/^@/,'')
       .replace(/\/.*$/,'')
       .replace(/[^A-Za-z0-9._]/g,'');
   }
 
   function igLink(){
-    if(state.mode === 'in'){
-      const h = cleanHandle(IG);
-      return h ? 'https://www.instagram.com/' + h : 'https://www.instagram.com/direct/inbox/';
-    }
-    const h = cleanHandle(state.targetIg);
-    return h ? 'https://www.instagram.com/' + h : 'https://www.instagram.com/direct/inbox/';
+    const h = state.mode === 'in' ? cleanHandle(IG) : cleanHandle(state.targetIg);
+    return h ? 'https://www.instagram.com/' + h + '/' : 'https://www.instagram.com/direct/inbox/';
   }
 
   function render(){
@@ -339,10 +336,10 @@
     $('send').href = igLink();
     if(state.mode === 'out'){
       $('send').textContent = cleanHandle(state.targetIg)
-        ? '複製內容，開 IG 送出'
-        : '複製內容，去 IG 揀人送出';
+        ? '複製內容，開 IG'
+        : '複製內容，去 IG 揀人';
     }else{
-      $('send').textContent = '複製內容，開 IG 送出';
+      $('send').textContent = '複製內容，開 IG';
     }
   }
 
@@ -464,7 +461,7 @@
     logIt();
     setTimeout(function(){
       $('donePreview').textContent = msg;
-      $('doneMsg').textContent = '內容已經複製咗，今次你用咗 ' + secs + ' 秒落決定。喺 IG 對話框長按，撳「貼上」，再送出。貼唔到嘅話，下面段字可以自己揀返。';
+      $('doneMsg').textContent = '內容已經複製咗，今次你用咗 ' + secs + ' 秒落決定。入到 IG profile 撳「訊息」，喺對話框長按貼上，再送出。貼唔到嘅話，下面段字可以自己揀返。';
       $('form').classList.add('hidden');
       $('timer').classList.add('hidden');
       $('done').classList.remove('hidden');
