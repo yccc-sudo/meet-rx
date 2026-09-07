@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#F2705B">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
 <title>見面拖延症治療所</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -152,11 +156,11 @@
     <p class="lead">揀一個開始</p>
     <button class="bigbtn" data-mode="in">
       <strong>約啦約啦</strong>
-      <span id="inSub">填好之後開我個 IG，撳「訊息」貼上就得</span>
+      <span id="inSub">填好之後直接送去我個 IG DM</span>
     </button>
     <button class="bigbtn" data-mode="out">
       <strong>我想搵其他人</strong>
-      <span>填好之後開對方 IG，撳「訊息」貼上就得</span>
+      <span>填好之後喺 IG 揀個人送出</span>
     </button>
   </section>
 
@@ -226,7 +230,7 @@
 
   <section class="done hidden" id="done">
     <h2>你已經踏出咗第一步</h2>
-    <p id="doneMsg">內容已經複製咗。入到 IG profile 撳「訊息」，長按貼上就得。</p>
+    <p id="doneMsg">內容已經複製咗。喺 IG profile 撳「訊息」，對話框長按貼上，再送出。</p>
     <div class="preview" id="donePreview"></div>
     <button class="again" id="again">再開多一張</button>
   </section>
@@ -260,7 +264,7 @@
                  + '-' + p2(now.getHours()) + p2(now.getMinutes());
   $('slipno').textContent = slipNo;
 
-  $('inSub').textContent = '填好之後開' + (OWNER ? ' ' + OWNER + ' ' : '我') + '個 IG，撳「訊息」貼上就得';
+  $('inSub').textContent = '填好之後直接送去' + (OWNER ? ' ' + OWNER + ' ' : '我') + '個 IG DM';
 
   /* ---------- 猶豫計時器 ---------- */
   let secs = 0, running = false;
@@ -319,15 +323,18 @@
   function cleanHandle(v){
     return String(v).trim()
       .replace(/^https?:\/\/(www\.)?instagram\.com\//i,'')
-      .replace(/[?#].*$/,'')
       .replace(/^@/,'')
-      .replace(/\/.*$/,'')
+      .split(/[\/?#]/)[0]
       .replace(/[^A-Za-z0-9._]/g,'');
   }
 
   function igLink(){
-    const h = state.mode === 'in' ? cleanHandle(IG) : cleanHandle(state.targetIg);
-    return h ? 'https://www.instagram.com/' + h + '/' : 'https://www.instagram.com/direct/inbox/';
+    if(state.mode === 'in'){
+      const h = cleanHandle(IG);
+      return h ? 'https://www.instagram.com/' + h : 'https://www.instagram.com/direct/inbox/';
+    }
+    const h = cleanHandle(state.targetIg);
+    return h ? 'https://www.instagram.com/' + h : 'https://www.instagram.com/direct/inbox/';
   }
 
   function render(){
@@ -461,7 +468,7 @@
     logIt();
     setTimeout(function(){
       $('donePreview').textContent = msg;
-      $('doneMsg').textContent = '內容已經複製咗，今次你用咗 ' + secs + ' 秒落決定。入到 IG profile 撳「訊息」，喺對話框長按貼上，再送出。貼唔到嘅話，下面段字可以自己揀返。';
+      $('doneMsg').textContent = '內容已經複製咗，今次你用咗 ' + secs + ' 秒落決定。喺 IG profile 撳「訊息」，對話框長按貼上，再送出。貼唔到嘅話，下面段字可以自己揀返。';
       $('form').classList.add('hidden');
       $('timer').classList.add('hidden');
       $('done').classList.remove('hidden');
