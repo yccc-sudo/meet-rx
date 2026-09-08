@@ -124,6 +124,23 @@
     border:1.5px solid var(--rule);color:var(--muted);font-family:var(--han);
     font-size:14px;padding:11px;border-radius:3px;cursor:pointer;
   }
+  .filebtn{
+    display:inline-block;margin-top:12px;font-family:var(--han);font-size:14px;
+    padding:7px 13px;border-radius:999px;border:1.5px dashed var(--rule);
+    color:var(--muted);background:transparent;cursor:pointer;
+  }
+  .filebtn:active{border-color:var(--ink);color:var(--ink)}
+  .thumbwrap{position:relative;display:inline-block;margin-top:12px}
+  .thumbwrap img{
+    display:block;max-width:150px;max-height:150px;border-radius:3px;
+    border:1px solid var(--rule);
+  }
+  .thumbx{
+    position:absolute;top:-9px;right:-9px;width:26px;height:26px;border-radius:50%;
+    background:var(--ink);color:var(--slip);border:0;cursor:pointer;
+    font-size:15px;line-height:1;padding:0;
+  }
+  .donephoto{display:block;margin:0 auto 14px;max-width:190px;border-radius:3px}
   .note{margin-top:14px;font-size:12.5px;color:var(--muted);text-align:center;line-height:1.65}
   .back{
     display:block;width:100%;margin-top:8px;background:transparent;border:0;
@@ -217,6 +234,12 @@
       <div class="field">
         <div class="q">仲有咩想講<span>唔想寫可以留空</span></div>
         <input type="text" id="note" placeholder="例如：想試下新開嗰間">
+        <input type="file" id="photo" accept="image/*" hidden>
+        <button class="filebtn" id="photoBtn" type="button">加張相（可選）</button>
+        <div class="thumbwrap hidden" id="thumbWrap">
+          <img id="thumb" alt="你揀咗嘅相">
+          <button class="thumbx" id="thumbX" type="button" aria-label="移除張相">&times;</button>
+        </div>
       </div>
 
       <div class="preview" id="preview"></div>
@@ -231,7 +254,9 @@
   <section class="done hidden" id="done">
     <h2>你已經踏出咗第一步</h2>
     <p id="doneMsg">內容已經複製咗。喺 IG profile 撳「訊息」，對話框長按貼上，再送出。</p>
+    <img class="donephoto hidden" id="donePhoto" alt="你揀咗嘅相">
     <div class="preview" id="donePreview"></div>
+    <a class="copy hidden" id="savePhoto" download="meet-rx.jpg">儲存張相</a>
     <button class="again" id="again">再開多一張</button>
   </section>
 
@@ -256,7 +281,7 @@
     mode:'in', name:'', target:'', targetIg:'',
     dateMode:'tomorrow', customDate:'',
     slot:'下午', customTime:'',
-    act:'食飯', customAct:'', note:''
+    act:'食飯', customAct:'', note:'', photo:null, photoUrl:''
   };
 
   const now = new Date();
@@ -365,6 +390,61 @@
     }
   }
 
+  /* ---------- 相片 ---------- */
+  // 縮到最長邊 1600px 再轉 JPEG，慳流量同加快分享
+  function shrink(file){
+    return new Promise(function(resolve){
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = function(){
+        const max = 1600;
+        let w = im.width, h = im.height;
+        if(Math.max(w,h) > max){
+          const k = max / Math.max(w,h);
+          w = Math.round(w*k); h = Math.round(h*k);
+        }
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(im, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        cv.toBlob(function(blob){
+          if(!blob){ resolve(file); return; }
+          resolve(new File([blob], 'meet-rx.jpg', {type:'image/jpeg'}));
+        }, 'image/jpeg', 0.85);
+      };
+      im.onerror = function(){ URL.revokeObjectURL(url); resolve(file); };
+      im.src = url;
+    });
+  }
+
+  function clearPhoto(){
+    if(state.photoUrl) URL.revokeObjectURL(state.photoUrl);
+    state.photo = null; state.photoUrl = '';
+    $('photo').value = '';
+    $('thumbWrap').classList.add('hidden');
+    $('photoBtn').classList.remove('hidden');
+  }
+
+  $('photoBtn').addEventListener('click', function(){ $('photo').click(); });
+  $('thumbX').addEventListener('click', clearPhoto);
+  $('photo').addEventListener('change', function(e){
+    const f = e.target.files && e.target.files[0];
+    if(!f) return;
+    shrink(f).then(function(out){
+      if(state.photoUrl) URL.revokeObjectURL(state.photoUrl);
+      state.photo = out;
+      state.photoUrl = URL.createObjectURL(out);
+      $('thumb').src = state.photoUrl;
+      $('thumbWrap').classList.remove('hidden');
+      $('photoBtn').classList.add('hidden');
+    });
+  });
+
+  function canShareFile(){
+    return !!(state.photo && navigator.canShare && navigator.share
+              && navigator.canShare({ files:[state.photo] }));
+  }
+
   /* ---------- 記錄 ---------- */
   function logIt(){
     if(!LOG_URL) return;
@@ -380,7 +460,8 @@
           time:   resolveTime(),
           act:    resolveAct(),
           note:   state.note.trim(),
-          secs:   secs
+          secs:   secs,
+          photo:  state.photo ? '有' : ''
         })
       });
     }catch(err){}
@@ -466,15 +547,44 @@
     copyText(msg);
     running = false;
     logIt();
-    setTimeout(function(){
-      $('donePreview').textContent = msg;
-      $('doneMsg').textContent = '內容已經複製咗，今次你用咗 ' + secs + ' 秒落決定。喺 IG profile 撳「訊息」，對話框長按貼上，再送出。貼唔到嘅話，下面段字可以自己揀返。';
-      $('form').classList.add('hidden');
-      $('timer').classList.add('hidden');
-      $('done').classList.remove('hidden');
-      window.scrollTo(0,0);
-    }, 700);
+
+    // 有相而且部機支援：用系統分享面板，相同文字一次過送
+    if(canShareFile()){
+      e.preventDefault();
+      navigator.share({ files:[state.photo], text: msg })
+        .catch(function(){})
+        .then(function(){ finish(true); });
+      return;
+    }
+    setTimeout(function(){ finish(false); }, 700);
   });
+
+  function finish(shared){
+    const msg = buildMsg();
+    $('donePreview').textContent = msg;
+    if(state.photo){
+      $('donePhoto').src = state.photoUrl;
+      $('donePhoto').classList.remove('hidden');
+      $('savePhoto').classList.remove('hidden');
+      $('savePhoto').href = state.photoUrl;
+    }else{
+      $('donePhoto').classList.add('hidden');
+      $('savePhoto').classList.add('hidden');
+    }
+    let tip;
+    if(shared){
+      tip = '喺分享面板揀 Instagram 就送到。今次你用咗 ' + secs + ' 秒落決定。';
+    }else if(state.photo){
+      tip = '文字已經複製咗，今次你用咗 ' + secs + ' 秒落決定。長按下面張相儲落相簿，再喺 IG 訊息度貼文字同加相。';
+    }else{
+      tip = '內容已經複製咗，今次你用咗 ' + secs + ' 秒落決定。喺 IG profile 撳「訊息」，對話框長按貼上，再送出。貼唔到嘅話，下面段字可以自己揀返。';
+    }
+    $('doneMsg').textContent = tip;
+    $('form').classList.add('hidden');
+    $('timer').classList.add('hidden');
+    $('done').classList.remove('hidden');
+    window.scrollTo(0,0);
+  }
 
   $('copy').addEventListener('click', function(){
     copyText(buildMsg());
@@ -483,6 +593,7 @@
   });
 
   $('again').addEventListener('click', function(){
+    clearPhoto();
     $('done').classList.add('hidden');
     $('gate').classList.remove('hidden');
     $('timer').classList.remove('hot');
