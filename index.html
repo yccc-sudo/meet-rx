@@ -124,6 +124,21 @@
     border:1.5px solid var(--rule);color:var(--muted);font-family:var(--han);
     font-size:14px;padding:11px;border-radius:3px;cursor:pointer;
   }
+  .sugbar{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+  .sugbtn{
+    font-family:var(--han);font-size:13px;padding:6px 12px;border-radius:999px;
+    border:1.5px dashed var(--rule);background:transparent;color:var(--muted);cursor:pointer;
+  }
+  .sugbtn:active{border-color:var(--ink);color:var(--ink)}
+  .sugout{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+  .sug{
+    font-family:var(--han);font-size:14px;text-align:left;line-height:1.45;
+    padding:9px 13px;border-radius:14px;cursor:pointer;
+    border:1.5px solid var(--rule);background:#F1F3EC;color:var(--ink);
+  }
+  .sug:active{background:var(--ink);color:var(--slip);border-color:var(--ink)}
+  .sug .tag{display:block;font-size:11px;color:var(--muted);letter-spacing:.08em;margin-bottom:2px}
+  .sug:active .tag{color:var(--rule)}
   .filebtn{
     display:inline-block;margin-top:12px;font-family:var(--han);font-size:14px;
     padding:7px 13px;border-radius:999px;border:1.5px dashed var(--rule);
@@ -253,6 +268,11 @@
           <button class="chip" data-v="其他">其他</button>
         </div>
         <input type="text" id="customAct" class="subinput hidden" placeholder="想做啲咩？自己填" aria-label="自己填想做啲咩">
+        <div class="sugbar">
+          <button class="sugbtn" id="rollBtn" type="button">再抽三個</button>
+          <button class="sugbtn" id="planBtn" type="button">抽個行程</button>
+        </div>
+        <div class="sugout" id="sugOut"></div>
       </div>
 
       <div class="field">
@@ -442,6 +462,243 @@
     }
   }
 
+  /* ---------- 香港提議庫 ----------
+     每項後面嘅字母代表適合嘅時段：a=上午 p=下午 n=夜晚
+     想加新項目，照住格式加落去就得 */
+  const IDEAS = [
+    ['行','卑路乍灣海濱長廊睇日落','p'],
+    ['行','元朗菠蘿園餵草泥馬','ap'],
+    ['玩','去 EpicLand 室內遊樂場','ap'],
+    ['食','大美督踩鴨仔船兼燒嘢食','ap'],
+    ['玩','北角 Bun’s 2020 室內滾軸溜冰','pn'],
+    ['行','太平山頂睇夜景','n'],
+    ['行','迪欣湖踩單車玩腳踏船','ap'],
+    ['行','西貢釣魚露營或者出海遊船河','ap'],
+    ['行','M+ 或者故宮文化博物館','ap'],
+    ['食','流浮山食海鮮','pn'],
+    ['行','濕地公園或者動植物公園睇動物','ap'],
+    ['行','南豐紗廠行街','ap'],
+    ['行','搭船去梅窩、坪洲或者南丫島','ap'],
+    ['玩','去貓 cafe 畀貓踩','apn'],
+    ['食','自助烘焙店整個蛋糕','ap'],
+    ['玩','影韓式貼紙相','pn'],
+    ['玩','合味道紀念館整杯自己嘅杯麵','ap'],
+    ['行','愉景灣 staycation','p'],
+    ['行','大澳坐船睇海豚','ap'],
+    ['食','長洲食大魚蛋','ap'],
+    ['行','中環大館行一轉','ap'],
+    ['行','嘉頓山睇靚景','pn'],
+    ['玩','MegaBox 溜冰','pn'],
+    ['行','西九野餐放風箏','ap'],
+    ['食','搵間靚 cafe 打卡','ap'],
+    ['食','旺中或者葵廣掃街','pn'],
+    ['行','搭昂坪 360 纜車','ap'],
+    ['行','天壇大佛一日遊','a'],
+    ['行','尖沙咀藝術館、太空館或者科學館','ap'],
+    ['行','赤柱廣場行市集','ap'],
+    ['行','D2 Place 行市集','ap'],
+    ['行','大東山睇芒草','ap'],
+    ['玩','海洋公園或者迪士尼','a'],
+    ['玩','荔枝角 VR 電競館','pn'],
+    ['玩','整地氈、情侶戒指或者手鈪工作坊','ap'],
+    ['玩','室內衝浪或者室內滑雪','pn'],
+    ['玩','玩密室逃脫','pn'],
+    ['行','Glamping 豪華露營','p'],
+    ['行','天后廟道三號花園隱世日式庭園','ap'],
+    ['行','太平山頂花園行下','ap'],
+    ['行','鶴嘴行山','a'],
+    ['行','石澳情人橋打卡','ap'],
+    ['行','淺水灣泳灘嬉水','ap'],
+    ['玩','體育館打羽毛球或者乒乓波','apn'],
+    ['食','九龍城食泰國串燒','pn'],
+    ['食','太安樓掃街食嘢','pn'],
+    ['行','下白泥睇日落同天空之鏡','p'],
+    ['玩','坐 AIA 摩天輪','pn'],
+    ['行','馬灣東灣泳灘睇青馬大橋夜景','n'],
+    ['行','港島電車由頭坐到尾','apn'],
+    ['行','西環泳棚打卡','ap'],
+    ['行','汀九橋夜景','n'],
+    ['食','深水埗搵間車仔麵，自己夾料','pn'],
+    ['食','廟街食煲仔飯','n'],
+    ['食','佐敦食碗糖水收尾','n'],
+    ['食','搵間舊式茶記食常餐','ap'],
+    ['食','西環食新鮮腸粉','a'],
+    ['食','元朗食豆腐花同雞蛋仔','ap'],
+    ['食','觀塘工廈搵間 cafe 食 brunch','ap'],
+    ['食','蘇豪食 tapas 飲返杯','n'],
+    ['食','銅鑼灣打邊爐','n'],
+    ['食','旺角搵間拉麵店排隊','pn'],
+    ['食','西貢食海鮮睇住個海','pn'],
+    ['食','荃灣食潮州打冷','n'],
+    ['食','深井食燒鵝','pn'],
+    ['食','灣仔食碗雲吞麵','pn'],
+    ['食','大坑食串燒飲啤酒','n'],
+    ['食','北角掃街食雞蛋仔','pn'],
+    ['食','上環食盅頭飯','ap'],
+    ['食','大埔墟街市樓上食碟頭飯','ap'],
+    ['食','尖沙咀食避風塘炒蟹','n'],
+    ['玩','去打保齡，輸咗嗰個請食嘢','pn'],
+    ['玩','玩飛鏢','n'],
+    ['玩','唱 K 唱到冇聲','n'],
+    ['玩','去 board game cafe 打幾鋪','pn'],
+    ['玩','去玩卡丁車','p'],
+    ['玩','室內攀石','pn'],
+    ['玩','打桌球','n'],
+    ['玩','去射箭','p'],
+    ['玩','睇午夜場戲','n'],
+    ['玩','去揼骨鬆一鬆','n'],
+    ['玩','書店打書釘，各自揀一本','pn'],
+    ['行','行龍脊睇住個海','ap'],
+    ['行','上大帽山吹風','ap'],
+    ['行','行大潭水塘','ap'],
+    ['行','中環行斜路搵壁畫','ap'],
+    ['行','深水埗行老舖掃平嘢','ap'],
+    ['行','去 PMQ 睇設計嘢','p'],
+    ['行','尖沙咀海濱散步','pn'],
+    ['行','去啟德體育園行下','pn'],
+    ['行','搵個天台等日落','p'],
+    ['行','南生圍踩單車','ap'],
+    ['行','大埔踩單車去大尾篤','ap'],
+    ['行','香港仔搭街渡','p'],
+    ['行','去黃大仙求支籤','ap'],
+    ['行','行花墟買返盆嘢','ap'],
+    ['行','廟街行夜市','n'],
+    ['行','去女人街掃街','n'],
+    ['傾','搵間 cafe 坐足一個下晝','ap'],
+    ['傾','去圖書館各自睇書','ap'],
+    ['傾','上天台吹水','n'],
+    ['傾','海邊搵位坐低傾','pn'],
+    ['傾','去 24 小時茶記傾到天光','n'],
+    ['食','朝早飲茶食點心','a'],
+    ['食','深水埗食豆漿油炸鬼做早餐','a'],
+    ['食','上環食碗艇仔粥','a'],
+    ['食','土瓜灣食碗魚蛋粉','ap'],
+    ['食','大圍食雞煲','n'],
+    ['食','重慶大廈食咖喱','pn'],
+    ['食','佐敦食越南河','pn'],
+    ['食','銅鑼灣排隊食舒芙蕾','pn'],
+    ['食','觀塘食韓燒','n'],
+    ['食','西營盤食糖水','n'],
+    ['食','慈雲山食牛雜','pn'],
+    ['食','元朗食碗涼粉','pn'],
+    ['食','中環街市搵嘢食','ap'],
+    ['食','大排檔炒幾味飲啤酒','n'],
+    ['食','荃灣食台灣菜飲手搖','pn'],
+    ['玩','去高爾夫練習場揮幾桿','pn'],
+    ['玩','夜場踢波','n'],
+    ['玩','去浸溫泉或者桑拿','n'],
+    ['玩','睇棟篤笑','n'],
+    ['玩','去 live house 聽 band','n'],
+    ['玩','睇舞台劇','n'],
+    ['玩','去彈床公園跳到攤','ap'],
+    ['玩','街場打籃球','pn'],
+    ['玩','去水上樂園玩水','a'],
+    ['玩','出海釣墨魚','n'],
+    ['玩','玩鐳射槍','pn'],
+    ['玩','去陶藝工作坊拉胚','ap'],
+    ['玩','上調酒班學整 cocktail','n'],
+    ['玩','跑馬地睇夜馬','n'],
+    ['玩','開枱打麻雀','n'],
+    ['行','行獅子山','a'],
+    ['行','上飛鵝山等日出','a'],
+    ['行','行千島湖清景台','a'],
+    ['行','城門水塘餵馬騮','ap'],
+    ['行','屯門黃金泳灘','ap'],
+    ['行','青龍頭海邊吹風','p'],
+    ['行','沙田城門河散步','ap'],
+    ['行','大圍車公廟拜下','ap'],
+    ['行','三棟屋博物館行下','ap'],
+    ['行','油麻地果欄夜遊','n'],
+    ['行','上環摩羅街搵古董','ap'],
+    ['行','灣仔藍屋行下','ap'],
+    ['行','搭天星小輪過海','apn'],
+    ['行','尖東海傍睇幻彩詠香江','n'],
+    ['行','觀塘海濱睇塗鴉牆','pn'],
+    ['行','屯門蝴蝶灣睇日落','p'],
+    ['行','大埔林村許願樹','ap'],
+    ['行','九龍寨城公園行下','ap'],
+    ['傾','揸車上山聽歌 chill','n'],
+    ['傾','便利店買嘢坐海邊','n'],
+    ['傾','去朋友屋企煮飯','pn'],
+    ['傾','一齊行超市買餸','pn']
+  ];
+
+  const PLANS = [
+    ['行程','大館睇展 → 卑路乍灣睇日落 → 西營盤食糖水','p'],
+    ['行程','行龍脊 → 石澳情人橋打卡 → 淺水灣坐到黃昏','a'],
+    ['行程','深水埗搵老舖 → 食車仔麵 → 旺角行夜市','p'],
+    ['行程','搭船去南丫島 → 食海鮮 → 船上睇日落','a'],
+    ['行程','M+睇展 → 西九野餐放風箏 → 尖東睇幻彩詠香江','p'],
+    ['行程','南豐紗廠行街 → 觀塘海濱睇塗鴉 → 食韓燒','p'],
+    ['行程','迪欣湖踩單車 → 昂坪360 → 天壇大佛','a'],
+    ['行程','大埔踩單車 → 大美督踩鴨仔船 → 燒嘢食','a'],
+    ['行程','打保齡 → 打邊爐 → 唱K收尾','n'],
+    ['行程','廟街食煲仔飯 → 行夜市 → 佐敦糖水','n'],
+    ['行程','長洲搭船 → 食大魚蛋 → 沙灘坐到黃昏','a'],
+    ['行程','元朗菠蘿園餵草泥馬 → 南生圍踩單車 → 食碗涼粉','a'],
+    ['行程','嘉頓山睇靚景 → 太安樓掃街 → 天台吹水','p'],
+    ['行程','下白泥天空之鏡 → 流浮山食海鮮 → 汀九橋夜景','p'],
+    ['行程','港島電車由頭坐到尾 → 中環街市食嘢 → 山頂睇夜景','p'],
+    ['行程','合味道紀念館整杯麵 → 坐AIA摩天輪 → 尖沙咀海濱散步','p']
+  ];
+
+  function slotCode(){
+    if(state.slot === '上午') return 'a';
+    if(state.slot === '下午') return 'p';
+    if(state.slot === '夜晚') return 'n';
+    if(state.slot === 'time' && state.customTime){
+      const hh = parseInt(state.customTime.split(':')[0], 10);
+      if(hh < 12) return 'a';
+      if(hh < 18) return 'p';
+      return 'n';
+    }
+    return '';
+  }
+
+  function pick(pool, n){
+    const code = slotCode();
+    let list = code ? pool.filter(function(x){ return x[2].indexOf(code) >= 0; }) : pool.slice();
+    if(list.length < n) list = pool.slice();
+    const out = [];
+    const used = {};
+    while(out.length < n && out.length < list.length){
+      const i = Math.floor(Math.random() * list.length);
+      if(used[i]) continue;
+      used[i] = 1;
+      out.push(list[i]);
+    }
+    return out;
+  }
+
+  function useIdea(text){
+    $('actChips').querySelectorAll('.chip').forEach(function(c){
+      c.setAttribute('aria-pressed', c.dataset.v === '其他' ? 'true' : 'false');
+    });
+    state.act = '其他';
+    state.customAct = text;
+    $('customAct').classList.remove('hidden');
+    $('customAct').value = text;
+    render();
+  }
+
+  function showIdeas(pool, n){
+    const box = $('sugOut');
+    box.innerHTML = '';
+    pick(pool, n).forEach(function(it){
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sug';
+      b.innerHTML = '<span class="tag"></span>';
+      b.querySelector('.tag').textContent = it[0];
+      b.appendChild(document.createTextNode(it[1]));
+      b.addEventListener('click', function(){ useIdea(it[1]); });
+      box.appendChild(b);
+    });
+  }
+
+  $('rollBtn').addEventListener('click', function(){ showIdeas(IDEAS, 3); });
+  $('planBtn').addEventListener('click', function(){ showIdeas(PLANS, 2); });
+
   /* ---------- 連結編碼 ---------- */
   function b64e(str){
     const bytes = new TextEncoder().encode(str);
@@ -573,6 +830,7 @@
   wireChips('slotChips','slot', v => {
     $('customTime').classList.toggle('hidden', v !== 'time');
     if(v === 'time') $('customTime').focus();
+    showIdeas(IDEAS, 3);
   });
   wireChips('actChips','act', v => {
     $('customAct').classList.toggle('hidden', v !== '其他');
@@ -597,6 +855,7 @@
     $('form').classList.remove('hidden');
     $('timer').classList.remove('hidden');
     running = true;
+    showIdeas(IDEAS, 3);
     render();
   });
 
