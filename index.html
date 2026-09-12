@@ -143,6 +143,10 @@
     border:1.5px solid var(--rule);background:#F1F3EC;color:var(--ink);
   }
   .sug:active{background:var(--ink);color:var(--slip);border-color:var(--ink)}
+  .sugflex{display:flex;align-items:center;gap:10px}
+  .sugflex .sbody{flex:1;cursor:pointer}
+  .sugflex .smap{flex:none;font-family:var(--han);font-size:12px;color:var(--ink);
+    text-decoration:underline;padding:4px 2px}
   .sug .tag{display:block;font-size:11px;color:var(--muted);letter-spacing:.08em;margin-bottom:2px}
   .sug:active .tag{color:var(--rule)}
   .filebtn{
@@ -319,6 +323,7 @@
           <button class="chip" data-v="其他">其他</button>
         </div>
         <input type="text" id="customAct" class="subinput hidden" placeholder="想做啲咩？自己填" aria-label="自己填想做啲咩">
+        <a class="sugbtn hidden" id="mapLink" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;text-decoration:none">喺 Google Maps 睇位置</a>
         <div class="sugbar">
           <button class="sugbtn" id="rollBtn" type="button">再抽三個</button>
           <button class="sugbtn" id="planBtn" type="button">抽個行程</button>
@@ -428,7 +433,11 @@
     <section class="slip">
       <div class="slipno"><span>收返嚟嘅回覆</span><span>夾時間處方箋</span></div>
       <div class="field">
-        <div class="q">將大家覆返嘅回覆碼貼落嚟<span>一行一個</span></div>
+        <div class="q">揀返係邊一次夾時間<span>出過嘅會自動記喺呢部機</span></div>
+        <div class="sugout" id="tPolls"></div>
+      </div>
+      <div class="field">
+        <div class="q">將大家覆返嘅回覆碼貼落嚟<span>一行一個，會自動記住</span></div>
         <textarea class="paste" id="tIn" placeholder="約-xxxxx&#10;約-yyyyy"></textarea>
       </div>
       <div class="res hidden" id="tRes"></div>
@@ -577,7 +586,17 @@
     return h ? 'https://www.instagram.com/' + h : 'https://www.instagram.com/direct/inbox/';
   }
 
+  function saveDraft(){
+    lsSet('meetrx_draft', {
+      name: state.name, target: state.target, targetIg: state.targetIg,
+      acts: state.acts, customAct: state.customAct, note: state.note,
+      dateMode: state.dateMode, customDate: state.customDate,
+      slot: state.slot, customTime: state.customTime, dist: state.dist
+    });
+  }
+
   function render(){
+    saveDraft();
     const msg = buildMsg();
     $('preview').textContent = buildSummary() + '\n\n對方會收到一條連結，撳開先睇到以上內容。';
     $('send').href = igLink();
@@ -1183,21 +1202,30 @@
     state.customAct = text;
     $('customAct').value = text;
     syncActChips();
+    updateMapLink();
     render();
+  }
+
+  function updateMapLink(){
+    const t = (state.customAct || '').trim();
+    const on = state.acts.indexOf('其他') >= 0 && t;
+    $('mapLink').classList.toggle('hidden', !on);
+    if(on) $('mapLink').href = mapUrl(t);
   }
 
   function showIdeas(pool, n, cats){
     const box = $('sugOut');
     box.innerHTML = '';
     pickMulti(pool, cats || [], n).forEach(function(it){
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'sug';
-      b.innerHTML = '<span class="tag"></span>';
-      b.querySelector('.tag').textContent = it[0];
-      b.appendChild(document.createTextNode(it[1]));
-      b.addEventListener('click', function(){ useIdea(it[1], it[0]); });
-      box.appendChild(b);
+      const card = document.createElement('div');
+      card.className = 'sug sugflex';
+      card.innerHTML = '<div class="sbody"><span class="tag"></span><span class="stxt"></span></div>' +
+                       '<a class="smap" target="_blank" rel="noopener">地圖</a>';
+      card.querySelector('.tag').textContent = it[0];
+      card.querySelector('.stxt').textContent = it[1];
+      card.querySelector('.smap').href = mapUrl(it[1]);
+      card.querySelector('.sbody').addEventListener('click', function(){ useIdea(it[1], it[0]); });
+      box.appendChild(card);
     });
   }
 
@@ -1256,6 +1284,15 @@
     state.sugCat = b.dataset.c;   // '' = 全部
     roll();
   });
+
+  /* ---------- 本機記憶 ---------- */
+  // 私密瀏覽模式可能唔畀用，所以全部包住 try
+  function lsGet(k, fb){ try{ const v = localStorage.getItem(k); return v === null ? fb : JSON.parse(v); }catch(e){ return fb; } }
+  function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+  function mapUrl(t){
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('香港 ' + String(t).split('，')[0].trim());
+  }
 
   /* ---------- 連結編碼 ---------- */
   function b64e(str){
@@ -1412,13 +1449,15 @@
     if(state.acts.indexOf('其他') >= 0 && v === '其他') $('customAct').focus();
     state.sugCat = null;
     $('catRow').querySelectorAll('.cat').forEach(function(c){ c.setAttribute('aria-pressed','false'); });
+    updateMapLink();
     roll();
     render();
   });
 
   const bind = (id, key) => $(id).addEventListener('input', e => { state[key] = e.target.value; render(); });
   bind('name','name'); bind('note','note');
-  bind('target','target'); bind('targetIg','targetIg'); bind('customAct','customAct');
+  bind('target','target'); bind('targetIg','targetIg');
+  $('customAct').addEventListener('input', function(e){ state.customAct = e.target.value; updateMapLink(); render(); });
   $('customDate').addEventListener('change', e => { state.customDate = e.target.value; render(); });
   $('customTime').addEventListener('change', e => { state.customTime = e.target.value; render(); });
 
@@ -1430,6 +1469,13 @@
       $('gate').classList.add('hidden');
       $('group').classList.remove('hidden');
       $('gno').textContent = slipNo;
+      const gd = lsGet('meetrx_gdraft', null);
+      if(gd && !gDaysSel.length && !gPicked.length){
+        $('gname').value = gd.n || ''; $('gact').value = gd.a || '';
+        $('gtime').value = gd.t || ''; $('gloc').value = gd.l || '';
+        gDaysSel = gd.days || []; gPicked = gd.picked || [];
+        if(gd.month) gMonth = new Date(gd.month);
+      }
       drawMakeGrid();
       gRender();
       return;
@@ -1656,14 +1702,22 @@
 
   function pollKey(enc){ return enc.slice(0, 6); }
 
-  function gRender(){
-    const payload = {
+  function pollPayload(){
+    return {
       n: $('gname').value.trim(),
       a: $('gact').value.trim(),
       t: $('gtime').value.trim(),
       l: $('gloc').value.trim(),
       k: gPicked.slice().sort()
     };
+  }
+
+  function gRender(){
+    const payload = pollPayload();
+    lsSet('meetrx_gdraft', {
+      n: payload.n, a: payload.a, t: payload.t, l: payload.l,
+      days: gDaysSel, picked: gPicked, month: gMonth.toISOString()
+    });
     const enc = b64e(JSON.stringify(payload));
     const link = location.origin + location.pathname + '#p=' + enc;
     const parts = [(payload.n ? payload.n + ' 想約大家' : '有人想約大家') + (payload.a ? '去' + payload.a : '')];
@@ -1693,12 +1747,22 @@
       box.appendChild(b);
     });
   });
+  function savePoll(){
+    const enc = b64e(JSON.stringify(pollPayload()));
+    let polls = lsGet('meetrx_polls', []);
+    polls = polls.filter(function(x){ return x.enc !== enc; });
+    polls.unshift({ enc: enc, ts: Date.now() });
+    lsSet('meetrx_polls', polls.slice(0, 10));
+  }
+
   $('gMake').addEventListener('click', function(e){
     if(!gPicked.length){ e.preventDefault(); alert('揀返最少一個時間先'); return; }
+    savePoll();
     copyText($('gMake').dataset.msg);
   });
   $('gCopy').addEventListener('click', function(){
     if(!gPicked.length){ alert('揀返最少一個時間先'); return; }
+    savePoll();
     copyText($('gMake').dataset.msg);
     $('gCopy').textContent = '已經複製';
     setTimeout(function(){ $('gCopy').textContent = '淨係複製'; }, 1800);
@@ -1710,6 +1774,7 @@
   $('gGoTally').addEventListener('click', function(){
     $('group').classList.add('hidden');
     $('tally').classList.remove('hidden');
+    drawPolls();
   });
   $('tBack').addEventListener('click', function(){
     $('tally').classList.add('hidden');
@@ -1724,10 +1789,21 @@
     $('vpno').textContent = 'No. ' + pollKey(enc).toUpperCase();
     $('vpTitle').textContent = (o.n || '有人') + ' 想約你哋';
     $('vpAct').textContent = o.a || '出嚟見面';
-    const extra = [];
-    if(o.t) extra.push('大約 ' + o.t);
-    if(o.l) extra.push('喺 ' + o.l);
-    $('vpExtra').textContent = extra.join('　·　');
+    $('vpExtra').innerHTML = '';
+    if(o.t){
+      const sp = document.createElement('span');
+      sp.textContent = '大約 ' + o.t;
+      $('vpExtra').appendChild(sp);
+    }
+    if(o.l){
+      if(o.t) $('vpExtra').appendChild(document.createTextNode('　·　'));
+      const a = document.createElement('a');
+      a.href = mapUrl(o.l);
+      a.target = '_blank'; a.rel = 'noopener';
+      a.style.color = 'inherit';
+      a.textContent = '喺 ' + o.l + '（地圖）';
+      $('vpExtra').appendChild(a);
+    }
     drawGrid($('vGrid'), o.k || [], vPicked, function(k, b){
       if(vPicked[k]){ delete vPicked[k]; b.setAttribute('aria-pressed','false'); }
       else { vPicked[k] = 1; b.setAttribute('aria-pressed','true'); }
@@ -1753,12 +1829,62 @@
   }
 
   /* ---- 計結果 ---- */
+  let tSel = null;
+
+  function drawPolls(){
+    const box = $('tPolls');
+    box.innerHTML = '';
+    tSel = null;
+    const polls = lsGet('meetrx_polls', []);
+    if(!polls.length){
+      const d = document.createElement('div');
+      d.style.cssText = 'font-size:13px;color:var(--muted)';
+      d.textContent = '呢部機未出過投票。返上一版整一個，撳「出張投票處方箋」嗰刻就會記底。';
+      box.appendChild(d);
+      return;
+    }
+    polls.forEach(function(pp, idx){
+      let o;
+      try{ o = JSON.parse(b64d(pp.enc)); }catch(err){ return; }
+      const d = new Date(pp.ts);
+      const card = document.createElement('button');
+      card.type = 'button'; card.className = 'sug';
+      card.innerHTML = '<span class="tag"></span>';
+      card.querySelector('.tag').textContent = (d.getMonth()+1) + '/' + d.getDate() + ' 出　·　' + (o.k || []).length + ' 個時段';
+      card.appendChild(document.createTextNode(o.a || o.n || '未寫做咩'));
+      card.addEventListener('click', function(){ selectPoll(pp, o, card); });
+      box.appendChild(card);
+      if(idx === 0) selectPoll(pp, o, card);
+    });
+  }
+
+  function selectPoll(pp, o, card){
+    tSel = { enc: pp.enc, o: o };
+    $('tPolls').querySelectorAll('.sug').forEach(function(c){ c.style.borderColor = ''; c.style.background = ''; });
+    card.style.borderColor = 'var(--ink)';
+    card.style.background = '#E4E9E0';
+    const codes = lsGet('meetrx_codes', {});
+    $('tIn').value = codes[pollKey(pp.enc)] || '';
+    $('tRes').classList.add('hidden');
+  }
+
+  $('tIn').addEventListener('input', function(){
+    if(!tSel) return;
+    const codes = lsGet('meetrx_codes', {});
+    codes[pollKey(tSel.enc)] = $('tIn').value;
+    lsSet('meetrx_codes', codes);
+  });
+
   $('tRun').addEventListener('click', function(){
-    const keys = gPicked.slice().sort();
-    if(!keys.length){ alert('要先喺上一版揀返啲候選時間'); return; }
-    const enc = b64e(JSON.stringify({ n: $('gname').value.trim(), a: $('gact').value.trim(),
-      t: $('gtime').value.trim(), l: $('gloc').value.trim(), k: keys }));
-    const want = pollKey(enc);
+    let keys, want;
+    if(tSel){
+      keys = (tSel.o.k || []).slice();
+      want = pollKey(tSel.enc);
+    }else{
+      keys = gPicked.slice().sort();
+      if(!keys.length){ alert('搵唔到投票記錄，返上一版整返個先'); return; }
+      want = pollKey(b64e(JSON.stringify(pollPayload())));
+    }
     const names = keys.map(function(){ return []; });
     let ok = 0, bad = 0;
     $('tIn').value.split(/\s+/).forEach(function(tok){
@@ -1872,6 +1998,41 @@
       return (o && o.k && o.k.length) ? { o: o, enc: m[1] } : null;
     }catch(err){ return null; }
   }
+
+  function setChip(groupId, v){
+    $(groupId).querySelectorAll('.chip').forEach(function(c){
+      c.setAttribute('aria-pressed', c.dataset.v === v ? 'true' : 'false');
+    });
+  }
+
+  // 開返上次填到一半嘅嘢
+  (function restoreDraft(){
+    const d = lsGet('meetrx_draft', null);
+    if(!d) return;
+    ['name','target','targetIg','customAct','note','customDate','customTime','dist'].forEach(function(k){
+      if(typeof d[k] === 'string') state[k] = d[k];
+    });
+    if(Array.isArray(d.acts) && d.acts.length) state.acts = d.acts;
+    if(d.dateMode) state.dateMode = d.dateMode;
+    if(d.slot) state.slot = d.slot;
+    $('name').value = state.name; $('target').value = state.target;
+    $('targetIg').value = state.targetIg; $('customAct').value = state.customAct;
+    $('note').value = state.note;
+    if(state.customDate) $('customDate').value = state.customDate;
+    if(state.customTime) $('customTime').value = state.customTime;
+    syncActChips();
+    setChip('dateChips', state.dateMode);
+    setChip('slotChips', state.slot);
+    $('customDate').classList.toggle('hidden', state.dateMode !== 'custom');
+    $('customTime').classList.toggle('hidden', state.slot !== 'time');
+    if(state.dist){
+      $('distRow').querySelectorAll('.cat').forEach(function(c){
+        c.setAttribute('aria-pressed', c.dataset.d === state.dist ? 'true' : 'false');
+      });
+      $('distBtn').textContent = '區：' + state.dist;
+    }
+    updateMapLink();
+  })();
 
   const poll = readPoll();
   const incoming = poll ? null : readHash();
