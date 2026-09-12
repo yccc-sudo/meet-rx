@@ -158,6 +158,30 @@
     color:var(--muted);font-family:var(--han);font-size:14px;padding:10px 20px;
     border-radius:3px;cursor:pointer}
 
+  /* ---- 收信人睇到嘅畫面 ---- */
+  .cover{text-align:center;padding:10px 0 6px}
+  .cover .kicker{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.1em}
+  .cover .big{font-size:22px;font-weight:700;margin:10px 0 4px;line-height:1.4}
+  .cover .from{font-size:14px;color:var(--muted)}
+  .vline{
+    opacity:0;transform:translateY(16px);
+    transition:opacity .55s ease, transform .55s cubic-bezier(.2,.75,.3,1);
+    padding:13px 0;border-bottom:1px dashed var(--rule);
+  }
+  .vline:last-child{border-bottom:0}
+  .vline.in{opacity:1;transform:none}
+  .vline .lb{font-size:12.5px;color:var(--muted);letter-spacing:.08em;margin-bottom:3px}
+  .vline .vv{font-size:19px;font-weight:600;line-height:1.45}
+  .vline.slogan .vv{font-size:17px;color:var(--rx);font-weight:700}
+  #vstamp{
+    opacity:0;transform:rotate(-11deg) scale(1.9);
+    transition:opacity .35s ease, transform .45s cubic-bezier(.2,1.5,.4,1);
+  }
+  #vstamp.in{opacity:.72;transform:rotate(-11deg) scale(1)}
+  @media (prefers-reduced-motion:reduce){
+    .vline{opacity:1;transform:none}
+    #vstamp{opacity:.72;transform:rotate(-11deg) scale(1)}
+  }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -251,6 +275,27 @@
     <button class="back" id="back">返去頭先</button>
   </main>
 
+  <!-- 收信人打開條 link 之後見到嘅嘢 -->
+  <section class="hidden" id="view">
+    <div class="cover" id="vcover">
+      <div class="kicker" id="vno2">No. —</div>
+      <div class="big">你收到一張見面處方箋</div>
+      <div class="from" id="vfrom"></div>
+    </div>
+    <button class="send" id="vopen">打開嚟睇</button>
+
+    <section class="slip hidden" id="vslip">
+      <div class="stamp hidden" id="vstamp">唔好再等</div>
+      <div class="slipno"><span id="vno">No. —</span><span>見面處方箋</span></div>
+      <div id="vlines"></div>
+    </section>
+
+    <div class="hidden" id="vactions">
+      <a class="send hidden" id="vreply" target="_blank" rel="noopener">覆返佢</a>
+      <button class="copy" id="vnew">開返一張畀佢</button>
+    </div>
+  </section>
+
   <section class="done hidden" id="done">
     <h2>你已經踏出咗第一步</h2>
     <p id="doneMsg">內容已經複製咗。喺 IG profile 撳「訊息」，對話框長按貼上，再送出。</p>
@@ -329,19 +374,26 @@
     return state.act;
   }
 
+  // 送出去嘅訊息只有一條連結，內容留返喺網頁度慢慢打開
   function buildMsg(){
+    const who = state.mode === 'in' ? state.name.trim() : state.target.trim();
     const L = ['見面處方箋 ' + slipNo];
-    if(state.mode === 'in'){
-      L.push('邊個：' + (state.name.trim() || '（未填名）'));
-    }else if(state.target.trim()){
-      L.push('致：' + state.target.trim());
-    }
+    if(state.mode === 'out' && who) L.push('致：' + who);
+    L.push('我開咗張處方箋畀你，撳開睇下：');
+    L.push(makeLink());
+    L.push('');
+    L.push('拒絕做得閒飲茶人！');
+    return L.join('\n');
+  }
+
+  // 表格入面自己睇嘅摘要
+  function buildSummary(){
+    const L = [];
+    if(state.mode === 'in') L.push('邊個：' + (state.name.trim() || '（未填名）'));
+    else if(state.target.trim()) L.push('致：' + state.target.trim());
     L.push('幾時：' + resolveDate() + ' ' + resolveTime());
     L.push('做咩：' + resolveAct());
     if(state.note.trim()) L.push('備註：' + state.note.trim());
-    L.push('');
-    L.push('拒絕做得閒飲茶人！');
-    L.push('（由「專治拖延症」發出，今次考慮咗 ' + secs + ' 秒）');
     return L.join('\n');
   }
 
@@ -364,7 +416,7 @@
 
   function render(){
     const msg = buildMsg();
-    $('preview').textContent = msg;
+    $('preview').textContent = buildSummary() + '\n\n對方會收到一條連結，撳開先睇到以上內容。';
     $('send').href = igLink();
     if(state.mode === 'out'){
       $('send').textContent = cleanHandle(state.targetIg)
@@ -388,6 +440,36 @@
       try{ document.execCommand('copy'); }catch(err){}
       document.body.removeChild(ta);
     }
+  }
+
+  /* ---------- 連結編碼 ---------- */
+  function b64e(str){
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    bytes.forEach(function(b){ bin += String.fromCharCode(b); });
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function b64d(str){
+    const t = str.replace(/-/g,'+').replace(/_/g,'/');
+    const bin = atob(t + '==='.slice((t.length + 3) % 4));
+    const bytes = Uint8Array.from(bin, function(c){ return c.charCodeAt(0); });
+    return new TextDecoder().decode(bytes);
+  }
+
+  function makeLink(){
+    const payload = {
+      o: slipNo,
+      f: state.mode === 'in' ? state.name.trim() : '',
+      t: state.mode === 'out' ? state.target.trim() : '',
+      d: resolveDate(),
+      s: resolveTime(),
+      a: resolveAct(),
+      r: state.note.trim(),
+      c: secs,
+      g: state.mode === 'out' ? cleanHandle(IG) : ''
+    };
+    const base = location.origin + location.pathname;
+    return base + '#i=' + b64e(JSON.stringify(payload));
   }
 
   /* ---------- 相片 ---------- */
@@ -562,6 +644,7 @@
   function finish(shared){
     const msg = buildMsg();
     $('donePreview').textContent = msg;
+    $('donePreview').style.fontSize = '11.5px';
     if(state.photo){
       $('donePhoto').src = state.photoUrl;
       $('donePhoto').classList.remove('hidden');
@@ -599,6 +682,82 @@
     $('timer').classList.remove('hot');
     secs = 0; $('clock').textContent = '00:00';
   });
+
+  /* ---------- 收信人畫面 ---------- */
+  const REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function readHash(){
+    const m = /[#&]i=([^&]+)/.exec(location.hash || '');
+    if(!m) return null;
+    try{
+      const o = JSON.parse(b64d(m[1]));
+      return (o && o.d) ? o : null;
+    }catch(err){ return null; }
+  }
+
+  function showView(o){
+    $('gate').classList.add('hidden');
+    $('form').classList.add('hidden');
+    $('timer').classList.add('hidden');
+    $('view').classList.remove('hidden');
+    $('vno').textContent = o.o || 'No. —';
+    $('vno2').textContent = o.o || 'No. —';
+    $('vfrom').textContent = o.f ? ('由 ' + o.f + ' 開出') : '';
+
+    const rows = [];
+    if(o.t) rows.push(['致', o.t]);
+    if(o.f) rows.push(['邊個搵你', o.f]);
+    rows.push(['幾時', (o.d || '') + ' ' + (o.s || '')]);
+    rows.push(['做咩', o.a || '']);
+    if(o.r) rows.push(['備註', o.r]);
+
+    $('vopen').addEventListener('click', function(){
+      $('vopen').classList.add('hidden');
+      $('vcover').classList.add('hidden');
+      $('vslip').classList.remove('hidden');
+
+      const box = $('vlines');
+      box.innerHTML = '';
+      rows.forEach(function(r){
+        const el = document.createElement('div');
+        el.className = 'vline';
+        el.innerHTML = '<div class="lb"></div><div class="vv"></div>';
+        el.querySelector('.lb').textContent = r[0];
+        el.querySelector('.vv').textContent = r[1];
+        box.appendChild(el);
+      });
+      const sl = document.createElement('div');
+      sl.className = 'vline slogan';
+      sl.innerHTML = '<div class="vv">拒絕做得閒飲茶人！</div>';
+      box.appendChild(sl);
+
+      const all = box.querySelectorAll('.vline');
+      const step = REDUCE ? 0 : 620;
+      all.forEach(function(el, i){
+        setTimeout(function(){ el.classList.add('in'); }, 80 + i*step);
+      });
+      const after = 80 + all.length*step;
+      setTimeout(function(){
+        $('vstamp').classList.remove('hidden');
+        requestAnimationFrame(function(){ $('vstamp').classList.add('in'); });
+      }, after);
+      setTimeout(function(){
+        $('vactions').classList.remove('hidden');
+        if(o.g){
+          $('vreply').href = 'https://www.instagram.com/' + o.g;
+          $('vreply').textContent = '覆返佢';
+          $('vreply').classList.remove('hidden');
+        }
+      }, after + 450);
+    });
+
+    $('vnew').addEventListener('click', function(){
+      location.href = location.origin + location.pathname;
+    });
+  }
+
+  const incoming = readHash();
+  if(incoming) showView(incoming);
 
   render();
 })();
